@@ -1,0 +1,7 @@
+build/
+*.idsig
+.gradle/
+*.pyc
+__pycache__/
+
+github_publish.py

@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#070A0F">
+    <title>Antigravity Mobile</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="app" class="app-container">
+        <!-- Top App Bar -->
+        <header class="app-header">
+            <div class="header-left">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2" stroke="url(#logoGrad)"></polygon>
+                        <line x1="12" y1="22" x2="12" y2="15.5"></line>
+                        <polyline points="22 8.5 12 15.5 2 8.5"></polyline>
+                        <defs>
+                            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stop-color="#3B82F6"/>
+                                <stop offset="100%" stop-color="#8B5CF6"/>
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                </div>
+                <div class="header-titles">
+                    <div class="app-title">Antigravity <span class="badge-mobile">MOBILE</span></div>
+                    <div class="app-subtitle" id="headerSubtitle">Gemini 3.8 Flash • Google Auth</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <!-- User Profile Chip -->
+                <div class="user-profile-chip" id="userProfileChip" title="Google Аккаунт">
+                    <div class="user-avatar" id="userAvatar">B</div>
+                    <span class="user-name" id="userShortName">bbq</span>
+                </div>
+                <button class="icon-btn" id="btnQuickSettings" title="Настройки">⚙️</button>
+            </div>
+        </header>
+
+        <!-- Main Content Views -->
+        <main class="content-viewport">
+            <!-- TAB 1: AGENT / CHAT -->
+            <section id="tabChat" class="tab-view active">
+                <div class="chat-container">
+                    <div class="chat-messages" id="chatMessages">
+                        <div class="welcome-card">
+                            <div class="welcome-icon">⚡</div>
+                            <h3>Добро пожаловать в Antigravity!</h3>
+                            <p id="welcomeGreeting">Вы вошли через аккаунт Google: <b style="color:#60A5FA;">3kgmorkovkii@gmail.com</b>. Агент готов к автономной работе на смартфоне без ПК.</p>
+                            <div class="welcome-features">
+                                <div>🚀 <b>Google Аккаунт:</b> доступ к моделям Gemini 3.8 Flash и Pro без API-ключей</div>
+                                <div>📱 <b>Полная автономность:</b> агент работает прямо на процессоре телефона</div>
+                                <div>🛠️ <b>Инструменты:</b> чтение/запись кода, запуск shell-команд, создание проектов</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Live Agent Status Banner -->
+                    <div class="agent-activity-bar" id="agentActivityBar" style="display: none;">
+                        <div class="spinner"></div>
+                        <span class="activity-text" id="agentActivityText">Агент размышляет...</span>
+                        <button class="btn-stop" id="btnStopAgent">⏹️ Стоп</button>
+                    </div>
+
+                    <!-- Quick Suggestions -->
+                    <div class="quick-prompts-bar" id="quickPrompts">
+                        <button class="prompt-chip" data-prompt="Создай проект простого веб-сервера на Python и запусти его">🐍 Python Сервер</button>
+                        <button class="prompt-chip" data-prompt="Покажи структуру текущей рабочей папки и список файлов">📂 Структура папки</button>
+                        <button class="prompt-chip" data-prompt="Напиши консольную игру Крестики-Нолики на Python и протестируй">🎮 Крестики-нолики</button>
+                        <button class="prompt-chip" data-prompt="Проверь системные команды и утилиты, доступные на телефоне">📱 Тест утилит Android</button>
+                    </div>
+
+                    <!-- Input Bar -->
+                    <div class="chat-input-bar">
+                        <button class="btn-voice" id="btnVoiceInput" title="Голосовой ввод">🎤</button>
+                        <div class="input-wrapper">
+                            <textarea id="promptInput" placeholder="Опишите задачу для агента..." rows="1"></textarea>
+                        </div>
+                        <button class="btn-send" id="btnSendPrompt" title="Отправить">
+                            <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor">
+                                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 2: FILES & CODE EDITOR -->
+            <section id="tabFiles" class="tab-view">
+                <div class="files-container">
+                    <div class="files-header">
+                        <div class="files-path-bar">
+                            <span class="path-label">📂</span>
+                            <span class="path-text" id="currentPathDisplay">/storage/...</span>
+                        </div>
+                        <div class="files-actions">
+                            <button class="btn-sm" id="btnNewFile">➕ Файл</button>
+                            <button class="btn-sm" id="btnNewFolder">📁 Папка</button>
+                            <button class="btn-sm" id="btnExportZip">📦 ZIP</button>
+                            <button class="btn-sm icon-only" id="btnRefreshFiles">🔄</button>
+                        </div>
+                    </div>
+                    <div class="files-list" id="filesList">
+                        <div class="loading-state">Загрузка файлов...</div>
+                    </div>
+                </div>
+
+                <!-- Fullscreen Code Editor Overlay -->
+                <div class="editor-overlay" id="editorOverlay" style="display:none;">
+                    <div class="editor-header">
+                        <div class="editor-title-group">
+                            <span class="editor-file-icon">📄</span>
+                            <span class="editor-filename" id="editorFileName">main.py</span>
+                        </div>
+                        <div class="editor-header-buttons">
+                            <button class="btn-sm btn-primary" id="btnSaveEditor">💾 Сохранить</button>
+                            <button class="btn-sm" id="btnCloseEditor">❌</button>
+                        </div>
+                    </div>
+                    <div class="code-shortcuts-bar">
+                        <span class="code-chip">{</span>
+                        <span class="code-chip">}</span>
+                        <span class="code-chip">(</span>
+                        <span class="code-chip">)</span>
+                        <span class="code-chip">[</span>
+                        <span class="code-chip">]</span>
+                        <span class="code-chip">=</span>
+                        <span class="code-chip">:</span>
+                        <span class="code-chip">"</span>
+                        <span class="code-chip">'</span>
+                        <span class="code-chip">&lt;</span>
+                        <span class="code-chip">&gt;</span>
+                        <span class="code-chip">/</span>
+                        <span class="code-chip">\</span>
+                        <span class="code-chip">_</span>
+                        <span class="code-chip">$</span>
+                    </div>
+                    <div class="editor-body">
+                        <textarea id="codeEditorArea" spellcheck="false" autocomplete="off" autocapitalize="none"></textarea>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 3: TERMINAL -->
+            <section id="tabTerminal" class="tab-view">
+                <div class="terminal-container">
+                    <div class="terminal-header">
+                        <div class="term-dots">
+                            <span class="dot red"></span>
+                            <span class="dot yellow"></span>
+                            <span class="dot green"></span>
+                        </div>
+                        <span class="terminal-title">Android Shell (/system/bin/sh)</span>
+                        <button class="btn-sm" id="btnClearTerminal">Очистить</button>
+                    </div>
+                    <div class="terminal-output" id="terminalOutput">
+                        <div class="term-welcome">
+                            [Antigravity Mobile Terminal]<br>
+                            Type commands to run directly in your Android workspace.<br>
+                        </div>
+                    </div>
+                    <div class="terminal-quick-cmds">
+                        <button class="term-chip" data-cmd="ls -la">ls -la</button>
+                        <button class="term-chip" data-cmd="pwd">pwd</button>
+                        <button class="term-chip" data-cmd="uname -a">uname -a</button>
+                        <button class="term-chip" data-cmd="whoami">whoami</button>
+                        <button class="term-chip" data-cmd="df -h">df -h</button>
+                        <button class="term-chip" data-cmd="python --version 2>&1 || python3 --version 2>&1">python</button>
+                    </div>
+                    <div class="terminal-input-bar">
+                        <span class="term-prompt">$</span>
+                        <input type="text" id="terminalInput" placeholder="sh команда..." autocomplete="off" autocapitalize="none" spellcheck="false">
+                        <button class="btn-term-send" id="btnRunTerm">↵</button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- TAB 4: SETTINGS -->
+            <section id="tabSettings" class="tab-view">
+                <div class="settings-container">
+                    <h2 class="settings-section-title">Настройки Antigravity</h2>
+
+                    <!-- Google Account Card -->
+                    <div class="settings-card google-account-card">
+                        <div class="card-header">
+                            <span class="card-icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24">
+                                    <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"/>
+                                    <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.24v3.15C3.26 21.36 7.33 24 12 24z"/>
+                                    <path fill="#FBBC05" d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.59H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.41l4.04-3.15z"/>
+                                    <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.59l4.04 3.15c.95-2.84 3.6-4.99 6.72-4.99z"/>
+                                </svg>
+                            </span>
+                            <span class="card-title">Google Аккаунт Antigravity</span>
+                        </div>
+                        <div class="account-info-box">
+                            <div class="account-avatar-large" id="settingsAvatar">B</div>
+                            <div class="account-details">
+                                <div class="account-name" id="settingsAccountName">bbq</div>
+                                <div class="account-email" id="settingsAccountEmail">3kgmorkovkii@gmail.com</div>
+                                <div class="account-badge">✓ Google One AI Connected</div>
+                            </div>
+                        </div>
+                        <div class="card-actions-row">
+                            <button class="btn-sm btn-primary" id="btnSwitchAccount">Сменить Google аккаунт</button>
+                        </div>
+                    </div>
+
+                    <!-- Model Selection -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <span class="card-icon">🧠</span>
+                            <span class="card-title">AI Модель</span>
+                        </div>
+                        <p class="card-desc">Модели Antigravity, привязанные к вашей Google подписке:</p>
+                        <select id="settingModelSelect" class="form-select">
+                            <option value="gemini-2.5-flash">⚡ Gemini 3.8 Flash (High) — Рекомендуется (быстро и умный код)</option>
+                            <option value="gemini-2.5-pro">🧠 Gemini 3.8 Pro (High) — Глубокие рассуждения и архитектура</option>
+                            <option value="gemini-2.5-flash-lite">🚀 Gemini Flash-Lite — Сверхбыстрая</option>
+                        </select>
+                    </div>
+
+                    <!-- Workspace Folder -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <span class="card-icon">📁</span>
+                            <span class="card-title">Рабочая папка (Workspace)</span>
+                        </div>
+                        <p class="card-desc">Путь на устройстве, где агент создает проекты, файлы и запускает команды.</p>
+                        <input type="text" id="settingWorkspacePath" class="form-input" placeholder="/storage/emulated/0/AntigravityProjects">
+                        <div class="card-actions-row">
+                            <button class="btn-sm" id="btnSaveWorkspace">💾 Сохранить путь</button>
+                            <button class="btn-sm" id="btnResetWorkspace">По умолчанию</button>
+                        </div>
+                    </div>
+
+                    <!-- Preferences -->
+                    <div class="settings-card">
+                        <div class="card-header">
+                            <span class="card-icon">🎛️</span>
+                            <span class="card-title">Параметры и отклик</span>
+                        </div>
+                        <label class="toggle-row">
+                            <span>Тактильный отклик (вибрация)</span>
+                            <input type="checkbox" id="settingHaptic" checked>
+                        </label>
+                        <label class="toggle-row">
+                            <span>Звуковые сигналы завершения</span>
+                            <input type="checkbox" id="settingSound" checked>
+                        </label>
+                    </div>
+
+                    <!-- Reset -->
+                    <div class="settings-card danger-card">
+                        <div class="card-header">
+                            <span class="card-icon">🗑️</span>
+                            <span class="card-title">История и память</span>
+                        </div>
+                        <p class="card-desc">Очистить текущую историю диалога и сбросить контекст агента.</p>
+                        <button class="btn-danger btn-sm" id="btnClearHistory">Очистить историю диалога</button>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- Google Sign-In Modal (when user wants to log in or switch account) -->
+        <div class="modal-overlay" id="googleAuthModal" style="display:none;">
+            <div class="modal-card">
+                <div class="modal-logo">
+                    <svg width="40" height="40" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.24v3.15C3.26 21.36 7.33 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.59H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.41l4.04-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.59l4.04 3.15c.95-2.84 3.6-4.99 6.72-4.99z"/>
+                    </svg>
+                </div>
+                <h3>Вход в Google Antigravity</h3>
+                <p class="modal-desc">Войдите через аккаунт Google, чтобы использовать Antigravity прямо на телефоне без ПК и без API-ключей.</p>
+
+                <div class="google-account-select-card" id="btnSelectDefaultAccount">
+                    <div class="select-avatar">B</div>
+                    <div class="select-info">
+                        <div class="select-name">bbq</div>
+                        <div class="select-email">3kgmorkovkii@gmail.com</div>
+                    </div>
+                    <div class="select-action">Войти →</div>
+                </div>
+
+                <div class="divider">или</div>
+
+                <button class="btn-google-signin" id="btnGoogleWebAuth">
+                    <svg width="18" height="18" viewBox="0 0 24 24">
+                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.8-2.4 3.66v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.15z"/>
+                        <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.94H1.24v3.15C3.26 21.36 7.33 24 12 24z"/>
+                        <path fill="#FBBC05" d="M5.28 14.26c-.25-.72-.38-1.49-.38-2.26s.13-1.54.38-2.26V6.59H1.24C.45 8.16 0 9.94 0 12s.45 3.84 1.24 5.41l4.04-3.15z"/>
+                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.26 2.64 1.24 6.59l4.04 3.15c.95-2.84 3.6-4.99 6.72-4.99z"/>
+                    </svg>
+                    <span>Войти с другим аккаунтом Google</span>
+                </button>
+
+                <button class="btn-sm" id="btnCloseAuthModal" style="margin-top:12px; width:100%;">Отмена</button>
+            </div>
+        </div>
+
+        <!-- Bottom Navigation Bar -->
+        <nav class="bottom-nav">
+            <button class="nav-item active" data-tab="tabChat">
+                <span class="nav-icon">💬</span>
+                <span class="nav-label">Агент</span>
+            </button>
+            <button class="nav-item" data-tab="tabFiles">
+                <span class="nav-icon">📁</span>
+                <span class="nav-label">Файлы</span>
+            </button>
+            <button class="nav-item" data-tab="tabTerminal">
+                <span class="nav-icon">💻</span>
+                <span class="nav-label">Терминал</span>
+            </button>
+            <button class="nav-item" data-tab="tabSettings">
+                <span class="nav-icon">⚙️</span>
+                <span class="nav-label">Настройки</span>
+            </button>
+        </nav>
+    </div>
+
+    <!-- Scripts -->
+    <script src="agent.js"></script>
+    <script src="terminal.js"></script>
+    <script src="editor.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
