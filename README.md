@@ -38,9 +38,10 @@
 
 ## 📦 Где находится готовый файл приложения?
 
-Готовый скомпилированный и подписанный APK уже ожидает вас:
-* **На рабочем столе:** [`C:\Users\bbq\Desktop\Antigravity-Mobile.apk`](file:///C:/Users/bbq/Desktop/Antigravity-Mobile.apk)
-* **В папке проекта:** [`C:\Users\bbq\Desktop\agyA\Antigravity-Mobile.apk`](file:///C:/Users/bbq/Desktop/agyA/Antigravity-Mobile.apk)
+* **🌐 На GitHub в разделе Releases:** [Скачать с GitHub Releases](https://github.com/bbqabsolute/antigravity-mobile/releases/latest)
+* **📥 Прямая ссылка на APK:** [Antigravity-Mobile.apk](https://github.com/bbqabsolute/antigravity-mobile/releases/download/v1.0.0/Antigravity-Mobile.apk)
+* **🖥️ На вашем рабочем столе:** [`C:\Users\bbq\Desktop\Antigravity-Mobile.apk`](file:///C:/Users/bbq/Desktop/Antigravity-Mobile.apk)
+* **📁 В папке проекта:** [`C:\Users\bbq\Desktop\agyA\Antigravity-Mobile.apk`](file:///C:/Users/bbq/Desktop/agyA/Antigravity-Mobile.apk)
 
 ---
 
