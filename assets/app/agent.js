@@ -318,7 +318,56 @@ Guidelines:
 
     async executeTool(name, args, workspaceDir) {
         if (!window.AntigravityBridge) {
-            return { error: "Antigravity native bridge is not available (running in pure browser)" };
+            // Termux REST API execution
+            try {
+                switch (name) {
+                    case "run_command": {
+                        const resp = await fetch("/api/exec", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ command: args.command, cwd: args.cwd || workspaceDir })
+                        });
+                        return await resp.json();
+                    }
+                    case "view_file": {
+                        const resp = await fetch(`/api/read?path=${encodeURIComponent(args.path)}`);
+                        return await resp.json();
+                    }
+                    case "write_to_file": {
+                        const resp = await fetch("/api/write", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ path: args.path, content: args.content })
+                        });
+                        return await resp.json();
+                    }
+                    case "replace_file_content": {
+                        const resp = await fetch("/api/replace", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ path: args.path, target: args.target, replacement: args.replacement })
+                        });
+                        return await resp.json();
+                    }
+                    case "list_directory": {
+                        const resp = await fetch(`/api/files?path=${encodeURIComponent(args.path || workspaceDir)}`);
+                        return await resp.json();
+                    }
+                    case "search_code": {
+                        const resp = await fetch("/api/exec", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ command: `grep -rn "${args.query}" .`, cwd: args.path || workspaceDir })
+                        });
+                        const res = await resp.json();
+                        return res.stdout || "No matches found";
+                    }
+                    default:
+                        return { error: "Unknown tool: " + name };
+                }
+            } catch (e) {
+                return { error: "Termux API error: " + e.message };
+            }
         }
 
         try {

@@ -1288,3 +1288,28 @@ body, html {
 .btn-google-signin:active {
     background: #E5E7EB;
 }
+
+.auth-buttons-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 12px;
+}
+
+.btn-google-signin.primary {
+    background: #FFFFFF;
+    color: #1F2937;
+    font-weight: 600;
+}
+
+.btn-google-signin.secondary {
+    background: var(--bg-surface-elevated);
+    color: var(--text-primary);
+    border: 1px solid var(--border-accent);
+    box-shadow: none;
+    font-size: 12px;
+}
+
+.btn-google-signin.secondary:active {
+    background: var(--bg-card);
+}

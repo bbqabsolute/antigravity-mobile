@@ -75,7 +75,28 @@ class MobileTerminal {
         this.appendOutput(`<div class="term-line term-cmd">$ ${this.escapeHtml(cmd)}</div>`);
 
         if (!window.AntigravityBridge) {
-            this.appendOutput(`<div class="term-line term-err">[Bridge not available: running in browser]</div>`);
+            // Termux execution via REST API
+            const workspaceDir = window.appState ? window.appState.workspaceDir : "";
+            fetch("/api/exec", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ command: cmd, cwd: workspaceDir })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.stdout && res.stdout.trim()) {
+                    this.appendOutput(`<div class="term-line">${this.escapeHtml(res.stdout)}</div>`);
+                }
+                if (res.stderr && res.stderr.trim()) {
+                    this.appendOutput(`<div class="term-line term-err">${this.escapeHtml(res.stderr)}</div>`);
+                }
+                if (res.exitCode !== 0) {
+                    this.appendOutput(`<div class="term-line term-err">[Process exited with code ${res.exitCode}]</div>`);
+                }
+            })
+            .catch(err => {
+                this.appendOutput(`<div class="term-line term-err">[Termux execution error: ${this.escapeHtml(err.message)}]</div>`);
+            });
             return;
         }
 

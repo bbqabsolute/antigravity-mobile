@@ -26,11 +26,31 @@ function initApp() {
     initAgentChat();
     initVoice();
     initSettingsView();
+    checkTermuxBackend();
 
     // Initialize modules
     window.terminalInstance = new MobileTerminal();
     window.projectInstance = new ProjectManager();
     window.projectInstance.setPath(window.appState.workspaceDir);
+}
+
+function checkTermuxBackend() {
+    fetch("/api/status")
+        .then(r => r.json())
+        .then(data => {
+            if (data.status === "ok") {
+                window.isTermux = true;
+                if (data.workspace) {
+                    window.appState.workspaceDir = data.workspace;
+                    if (window.projectInstance) window.projectInstance.setPath(data.workspace);
+                }
+                const subtitle = document.getElementById("headerSubtitle");
+                if (subtitle) {
+                    subtitle.innerText = "⚡ Termux Linux • Gemini 3.8 Flash";
+                }
+            }
+        })
+        .catch(() => {});
 }
 
 // ----------------- SETTINGS & PERSISTENCE -----------------
@@ -109,7 +129,8 @@ function initGoogleAuth() {
     const btnSwitch = document.getElementById("btnSwitchAccount");
     const btnClose = document.getElementById("btnCloseAuthModal");
     const btnDefaultAcc = document.getElementById("btnSelectDefaultAccount");
-    const btnOtherGoogle = document.getElementById("btnGoogleWebAuth");
+    const btnNativeGoogle = document.getElementById("btnGoogleNativeAuth");
+    const btnWebGoogle = document.getElementById("btnGoogleWebAuth");
 
     chip?.addEventListener("click", () => {
         modal.style.display = "flex";
@@ -123,34 +144,63 @@ function initGoogleAuth() {
         modal.style.display = "none";
     });
 
+    // 1-Click Fast Connect
     btnDefaultAcc?.addEventListener("click", () => {
+        setAccount("3kgmorkovkii@gmail.com", "bbq");
+        modal.style.display = "none";
+    });
+
+    // 1. Native Android System Account Picker
+    btnNativeGoogle?.addEventListener("click", () => {
+        if (window.AntigravityBridge && window.AntigravityBridge.signInWithGoogle) {
+            window.AntigravityBridge.signInWithGoogle();
+        } else {
+            // In browser fallback
+            window.open("https://accounts.google.com/o/oauth2/v2/auth?client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&response_type=token&redirect_uri=urn:ietf:wg:oauth:2.0:oob&scope=openid%20email%20profile", "_blank");
+        }
+    });
+
+    // 2. Official Google Web OAuth
+    btnWebGoogle?.addEventListener("click", () => {
+        if (window.AntigravityBridge && window.AntigravityBridge.signInWithGoogleWeb) {
+            window.AntigravityBridge.signInWithGoogleWeb();
+        } else {
+            window.open("https://accounts.google.com/o/oauth2/v2/auth?client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&response_type=token&redirect_uri=urn:ietf:wg:oauth:2.0:oob&scope=openid%20email%20profile", "_blank");
+        }
+    });
+
+    // Callback from native Android AccountManager
+    window.onGoogleSignInSuccess = (email) => {
+        if (email) {
+            const name = email.split("@")[0];
+            setAccount(email, name);
+            modal.style.display = "none";
+        }
+    };
+
+    // Callback from OAuth redirect
+    window.onOAuthCallback = (query) => {
+        try {
+            const params = new URLSearchParams(query);
+            const token = params.get("access_token");
+            if (token) {
+                window.appState.account.token = token;
+                localStorage.setItem("google_account", JSON.stringify(window.appState.account));
+            }
+        } catch (e) {}
+        modal.style.display = "none";
+    };
+
+    function setAccount(email, name) {
         window.appState.account = {
-            name: "bbq",
-            email: "3kgmorkovkii@gmail.com",
+            name: name || email.split("@")[0],
+            email: email.trim(),
             isConnected: true
         };
         localStorage.setItem("google_account", JSON.stringify(window.appState.account));
         updateAccountUI();
-        modal.style.display = "none";
         if (window.AntigravityBridge?.vibrate) window.AntigravityBridge.vibrate(30);
-    });
-
-    btnOtherGoogle?.addEventListener("click", () => {
-        const email = prompt("Введите ваш Google Email для входа в Antigravity:", "user@gmail.com");
-        if (email && email.includes("@")) {
-            const name = email.split("@")[0];
-            window.appState.account = {
-                name: name,
-                email: email.trim(),
-                isConnected: true
-            };
-            localStorage.setItem("google_account", JSON.stringify(window.appState.account));
-            updateAccountUI();
-            modal.style.display = "none";
-            if (window.AntigravityBridge?.vibrate) window.AntigravityBridge.vibrate(30);
-            alert("✓ Вход выполнен! Google аккаунт " + email + " успешно подключен.");
-        }
-    });
+    }
 }
 
 // ----------------- NAVIGATION -----------------

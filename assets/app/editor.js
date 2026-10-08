@@ -46,22 +46,36 @@ class ProjectManager {
         this.filesListElem.innerHTML = `<div class="loading-state">Чтение файлов...</div>`;
 
         if (!window.AntigravityBridge) {
-            this.filesListElem.innerHTML = `<div class="loading-state">[Bridge недоступен]</div>`;
+            // Load from Termux REST API
+            fetch(`/api/files?path=${encodeURIComponent(this.currentPath)}`)
+                .then(r => r.json())
+                .then(items => {
+                    this.renderFiles(items);
+                })
+                .catch(err => {
+                    this.filesListElem.innerHTML = `<div class="loading-state">Ошибка: ${this.escapeHtml(err.message)}</div>`;
+                });
             return;
         }
 
         try {
             const raw = window.AntigravityBridge.listFiles(this.currentPath);
             const items = JSON.parse(raw);
+            this.renderFiles(items);
+        } catch (e) {
+            this.filesListElem.innerHTML = `<div class="loading-state">Ошибка: ${this.escapeHtml(e.message)}</div>`;
+        }
+    }
 
-            if (!items || items.length === 0) {
-                this.filesListElem.innerHTML = `
-                    <div style="padding: 24px; text-align: center; color: var(--text-secondary);">
-                        Папка пуста. Агент создаст файлы здесь или нажмите «➕ Файл».
-                    </div>
-                `;
-                return;
-            }
+    renderFiles(items) {
+        if (!items || items.length === 0) {
+            this.filesListElem.innerHTML = `
+                <div style="padding: 24px; text-align: center; color: var(--text-secondary);">
+                    Папка пуста. Агент создаст файлы здесь или нажмите «➕ Файл».
+                </div>
+            `;
+            return;
+        }
 
             // Sort: directories first, then alphabetical
             items.sort((a, b) => {
@@ -120,7 +134,22 @@ class ProjectManager {
     }
 
     openFile(path, name) {
-        if (!window.AntigravityBridge) return;
+        if (!window.AntigravityBridge) {
+            fetch(`/api/read?path=${encodeURIComponent(path)}`)
+                .then(r => r.json())
+                .then(res => {
+                    if (res.status === "ok") {
+                        this.currentEditingFile = path;
+                        this.editorFileNameElem.innerText = name;
+                        this.editorArea.value = res.content || "";
+                        this.editorOverlay.style.display = "flex";
+                    } else {
+                        alert("Ошибка открытия файла: " + (res.error || "Неизвестная ошибка"));
+                    }
+                })
+                .catch(e => alert("Ошибка чтения: " + e.message));
+            return;
+        }
         try {
             const raw = window.AntigravityBridge.readFile(path, 0, 0);
             const res = JSON.parse(raw);
@@ -138,9 +167,29 @@ class ProjectManager {
     }
 
     saveCurrentFile() {
-        if (!this.currentEditingFile || !window.AntigravityBridge) return;
+        if (!this.currentEditingFile) return;
+        const content = this.editorArea.value;
+
+        if (!window.AntigravityBridge) {
+            fetch("/api/write", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ path: this.currentEditingFile, content: content })
+            })
+            .then(r => r.json())
+            .then(res => {
+                if (res.status === "ok") {
+                    this.showToast("Файл сохранен!");
+                    this.refresh();
+                } else {
+                    alert("Ошибка сохранения: " + res.error);
+                }
+            })
+            .catch(e => alert("Ошибка сохранения: " + e.message));
+            return;
+        }
+
         try {
-            const content = this.editorArea.value;
             const raw = window.AntigravityBridge.writeFile(this.currentEditingFile, content, true);
             const res = JSON.parse(raw);
             if (res.status === "ok") {

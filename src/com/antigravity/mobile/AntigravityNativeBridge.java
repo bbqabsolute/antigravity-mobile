@@ -42,6 +42,33 @@ public class AntigravityNativeBridge {
     }
 
     @JavascriptInterface
+    public void signInWithGoogle() {
+        activity.runOnUiThread(activity::startNativeGoogleSignIn);
+    }
+
+    @JavascriptInterface
+    public void signInWithGoogleWeb() {
+        activity.runOnUiThread(activity::startWebGoogleSignIn);
+    }
+
+    @JavascriptInterface
+    public String getDeviceGoogleAccounts() {
+        JSONArray arr = new JSONArray();
+        try {
+            android.accounts.AccountManager am = android.accounts.AccountManager.get(activity);
+            android.accounts.Account[] accounts = am.getAccountsByType("com.google");
+            if (accounts != null) {
+                for (android.accounts.Account acc : accounts) {
+                    if (acc != null && acc.name != null) {
+                        arr.put(acc.name);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+        return arr.toString();
+    }
+
+    @JavascriptInterface
     public String executeShell(String command, String cwd) {
         if (cwd == null || cwd.trim().isEmpty()) {
             cwd = getWorkspaceDir();

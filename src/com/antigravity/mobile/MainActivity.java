@@ -1,10 +1,12 @@
 package com.antigravity.mobile;
 
 import android.Manifest;
+import android.accounts.AccountManager;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.speech.RecognizerIntent;
@@ -25,6 +27,7 @@ public class MainActivity extends Activity {
 
     private static final int REQ_VOICE = 101;
     private static final int REQ_PERMS = 102;
+    private static final int REQ_CHOOSE_ACCOUNT = 103;
 
     private WebView webView;
     private AntigravityNativeBridge nativeBridge;
@@ -55,7 +58,47 @@ public class MainActivity extends Activity {
         setupWebView();
         checkPermissions();
 
-        webView.loadUrl("file:///android_asset/app/index.html");
+        // Handle OAuth redirect intents if app was launched via deep link
+        handleIntent(getIntent());
+
+        // Auto-detect if Termux server is running on localhost:8080
+        new Thread(() -> {
+            boolean termuxRunning = false;
+            try {
+                java.net.Socket s = new java.net.Socket();
+                s.connect(new java.net.InetSocketAddress("127.0.0.1", 8080), 300);
+                s.close();
+                termuxRunning = true;
+            } catch (Exception ignored) {}
+
+            final boolean isRunning = termuxRunning;
+            runOnUiThread(() -> {
+                if (isRunning) {
+                    webView.loadUrl("http://127.0.0.1:8080");
+                } else {
+                    webView.loadUrl("file:///android_asset/app/index.html");
+                }
+            });
+        }).start();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        handleIntent(intent);
+    }
+
+    private void handleIntent(Intent intent) {
+        if (intent != null && intent.getData() != null) {
+            Uri data = intent.getData();
+            if ("antigravity".equals(data.getScheme())) {
+                // e.g. antigravity://oauth2callback?code=...
+                String query = data.getQuery();
+                if (query != null) {
+                    webView.evaluateJavascript("window.onOAuthCallback && window.onOAuthCallback('" + query.replace("'", "\\'") + "');", null);
+                }
+            }
+        }
     }
 
     private void setupWebView() {
@@ -72,6 +115,9 @@ public class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(true);
         settings.setSupportZoom(false);
         settings.setDisplayZoomControls(false);
+
+        // Use modern mobile Chrome User-Agent to ensure full Google OAuth compatibility
+        settings.setUserAgentString("Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Mobile Safari/537.36");
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             settings.setSafeBrowsingEnabled(false);
@@ -95,8 +141,12 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                if (url.startsWith("antigravity://")) {
+                    handleIntent(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                    return true;
+                }
                 if (url.startsWith("http://") || url.startsWith("https://")) {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, android.net.Uri.parse(url));
+                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
                     startActivity(intent);
                     return true;
                 }
@@ -123,6 +173,34 @@ public class MainActivity extends Activity {
         }
     }
 
+    public void startNativeGoogleSignIn() {
+        try {
+            Intent intent = AccountManager.newChooseAccountIntent(
+                    null,
+                    null,
+                    new String[]{"com.google"},
+                    null,
+                    null,
+                    null,
+                    null);
+            startActivityForResult(intent, REQ_CHOOSE_ACCOUNT);
+        } catch (Exception e) {
+            startWebGoogleSignIn();
+        }
+    }
+
+    public void startWebGoogleSignIn() {
+        try {
+            String oauthUrl = "https://accounts.google.com/o/oauth2/v2/auth?" +
+                    "client_id=1071006060591-tmhssin2h21lcre235vtolojh4g403ep.apps.googleusercontent.com&" +
+                    "response_type=token&" +
+                    "redirect_uri=urn:ietf:wg:oauth:2.0:oob&" +
+                    "scope=openid%20email%20profile%20https://www.googleapis.com/auth/userinfo.email%20https://www.googleapis.com/auth/userinfo.profile";
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(oauthUrl));
+            startActivity(intent);
+        } catch (Exception ignored) {}
+    }
+
     public void startVoiceInput() {
         try {
             Intent intent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -131,7 +209,6 @@ public class MainActivity extends Activity {
             intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "Диктуйте команду для Antigravity...");
             startActivityForResult(intent, REQ_VOICE);
         } catch (Exception e) {
-            // Speech recognition not supported on device
             webView.evaluateJavascript("window.onVoiceInputError && window.onVoiceInputError('Распознавание речи недоступно');", null);
         }
     }
@@ -146,12 +223,17 @@ public class MainActivity extends Activity {
                 String safeText = spokenText.replace("\\", "\\\\").replace("'", "\\'").replace("\n", "\\n");
                 webView.evaluateJavascript("window.onVoiceInputResult && window.onVoiceInputResult('" + safeText + "');", null);
             }
+        } else if (requestCode == REQ_CHOOSE_ACCOUNT && resultCode == RESULT_OK && data != null) {
+            String accountName = data.getStringExtra(AccountManager.KEY_ACCOUNT_NAME);
+            if (accountName != null && !accountName.trim().isEmpty()) {
+                String safeEmail = accountName.trim().replace("\\", "\\\\").replace("'", "\\'");
+                webView.evaluateJavascript("window.onGoogleSignInSuccess && window.onGoogleSignInSuccess('" + safeEmail + "');", null);
+            }
         }
     }
 
     @Override
     public void onBackPressed() {
-        // Delegate back press to web app (e.g. to close editor modal or switch to chat tab)
         webView.evaluateJavascript("window.handleBackPressed ? window.handleBackPressed() : false", value -> {
             if (!"true".equals(value)) {
                 super.onBackPressed();

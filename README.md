@@ -34,52 +34,49 @@
    - Диктовка команд голосом через микрофон смартфона.
    - Приятная вибрация (haptic feedback) и звуковые сигналы при завершении задач.
 
----
-
-## 📦 Где находится готовый файл приложения?
-
-* **🌐 На GitHub в разделе Releases:** [Скачать с GitHub Releases](https://github.com/bbqabsolute/antigravity-mobile/releases/latest)
-* **📥 Прямая ссылка на APK:** [Antigravity-Mobile.apk](https://github.com/bbqabsolute/antigravity-mobile/releases/download/v1.0.0/Antigravity-Mobile.apk)
-* **🖥️ На вашем рабочем столе:** [`C:\Users\bbq\Desktop\Antigravity-Mobile.apk`](file:///C:/Users/bbq/Desktop/Antigravity-Mobile.apk)
-* **📁 В папке проекта:** [`C:\Users\bbq\Desktop\agyA\Antigravity-Mobile.apk`](file:///C:/Users/bbq/Desktop/agyA/Antigravity-Mobile.apk)
+6. **⚡ Интеграция с Termux (Режим Antigravity CLI)**:
+   - Встроенный CLI-движок в Termux: полноценный терминальный Linux-интерфейс (`agy`).
+   - Запуск мобильного UI прямо из Termux: команда `agy --ui` запускает сервер на `http://127.0.0.1:8080` и открывает этот же интерфейс (Чат, Thinking, Файлы, Терминал) в мобильном браузере или в APK!
+   - Установка в Termux в одну строку!
 
 ---
 
-## 📲 Как установить на телефон (3 простых способа)
+## 📱 Запуск через Termux на телефоне (В одну строку!)
 
-### Способ 1: По QR-коду через Wi-Fi (Рекомендуется)
-1. На компьютере запустите файл [`share_apk.bat`](file:///C:/Users/bbq/Desktop/agyA/share_apk.bat) (или выполните `python share_apk.py`).
-2. В консоли появится QR-код и локальный адрес (например, `http://192.168.0.x:8080`).
-3. Наведите камеру телефона на QR-код и нажмите ссылку.
-4. Откроется страница с кнопкой **«📥 Скачать APK»**. Нажмите её.
-5. Откройте скачанный файл и подтвердите установку (если спросит, разрешите установку из браузера).
+Если вы хотите использовать мощную среду Linux с Python, Node.js, git и clang:
 
-### Способ 2: Через USB-кабель (или ADB)
-* Подключите телефон кабелем к компьютеру в режиме передачи файлов и скопируйте `Antigravity-Mobile.apk` в папку «Загрузки» (Downloads) на телефоне.
-* Или, если включена отладка по USB, введите в консоли:
-  ```bash
-  adb install -r Antigravity-Mobile.apk
-  ```
-
-### Способ 3: Через Telegram / Избранное
-* Перетащите файл `Antigravity-Mobile.apk` в Telegram в «Избранное» (Saved Messages) и откройте на телефоне в один клик.
+1. Откройте **Termux** на смартфоне.
+2. Вставьте и выполните команду:
+   ```bash
+   pkg update -y && pkg install -y git python && git clone https://github.com/bbqabsolute/antigravity-mobile.git && cd antigravity-mobile/termux && bash install.sh
+   ```
+3. Готово! Теперь вам доступна глобальная команда:
+   * `agy --ui` — запускает локальный сервер и открывает полноценный мобильный интерфейс Antigravity в браузере (или в APK).
+   * `agy` — запускает интерактивный консольный CLI прямо в терминале Termux.
 
 ---
 
-## ⚙️ Первый запуск на телефоне
+## 📦 Установка APK-приложения на Android (Samsung S21 FE / Android 16)
 
-1. Откройте приложение **Antigravity Mobile** на телефоне.
-2. Приложение **автоматически подключено к вашему Google аккаунту Antigravity** (`3kgmorkovkii@gmail.com`).
-   - Никаких API-ключей вводить **НЕ нужно**!
-   - Если хотите сменить аккаунт, нажмите на аватар в правом верхнем углу или в «Настройках» нажмите **«Сменить Google аккаунт»**.
-3. Перейдите во вкладку **«💬 Агент»** и сразу начинайте работу:
-   - Введите задачу текстом или надиктуйте голосом через микрофон 🎤.
-   - Агент сразу приступает к выполнению: размышляет, создает файлы проекта и запускает код прямо на телефоне без ПК!
+* **🌐 Скачать с GitHub Releases:** [Antigravity-Mobile.apk](https://github.com/bbqabsolute/antigravity-mobile/releases/latest)
+* **📥 Прямая ссылка:** [Скачать APK v1.0.0](https://github.com/bbqabsolute/antigravity-mobile/releases/download/v1.0.0/Antigravity-Mobile.apk)
+
+> **💡 Совет для владельцев Samsung Galaxy (One UI 6 / 7 / Android 16):**  
+> Если телефон пишет *"Приложение заблокировано"* или *"Не поддерживается"*, перейдите в:  
+> **Настройки -> Безопасность и конфиденциальность -> Автоблокировка (Auto Blocker)** -> временно выключите тумблер для установки сторонних APK.
+
+---
+
+## ⚙️ Вход через Google
+
+1. При открытии приложения или веб-интерфейса нажмите **«Войти через Google»**.
+2. В нативном приложении открывается системный диалог выбора Google-аккаунта вашего устройства.
+3. В веб/Termux режиме открывается официальное окно входа Google.
+4. Авторизация сохраняется локально на смартфоне. Никаких ручных ключей API!
 
 ---
 
 ## 🛠️ Сборка APK из исходников
 
-Если вы измените исходный код или дизайн:
-* Просто запустите [`build_apk.bat`](file:///C:/Users/bbq/Desktop/agyA/build_apk.bat) или `python build_apk.py`.
-* Скрипт автоматически компилирует ресурсы через `aapt2`, компилирует Java через `javac`, транслирует в байткод `d8`, выравнивает через `zipalign` и подписывает через `apksigner` с помощью официального Android SDK.
+* Запустите `build_apk.bat` или `python build_apk.py`.
+* Скрипт собирает готовый и подписанный `Antigravity-Mobile.apk` с таргетом `minSdkVersion="26"` и `targetSdkVersion="35"` (полная поддержка Android 8 — Android 16).
