@@ -95,6 +95,8 @@ def main():
         "-I", ANDROID_JAR,
         compiled_res,
         "--manifest", manifest,
+        "--min-sdk-version", "26",
+        "--target-sdk-version", "35",
         "-o", unaligned_res_apk,
         "--java", gen_dir,
         "--auto-add-overlay"
@@ -131,7 +133,7 @@ def main():
     d8_cmd = [
         D8,
         "--lib", ANDROID_JAR,
-        "--min-api", "24",
+        "--min-api", "26",
         "--output", dex_dir
     ] + class_files
     run_cmd(d8_cmd)
@@ -179,6 +181,7 @@ def main():
         APKSIGNER, "sign",
         "--ks", KEYSTORE,
         "--ks-pass", "pass:android",
+        "--min-sdk-version", "26",
         "--out", OUTPUT_APK,
         aligned_apk
     ])
