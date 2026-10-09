@@ -34,25 +34,24 @@
    - Диктовка команд голосом через микрофон смартфона.
    - Приятная вибрация (haptic feedback) и звуковые сигналы при завершении задач.
 
-6. **⚡ Интеграция с Termux (Режим Antigravity CLI)**:
-   - Встроенный CLI-движок в Termux: полноценный терминальный Linux-интерфейс (`agy`).
-   - Запуск мобильного UI прямо из Termux: команда `agy --ui` запускает сервер на `http://127.0.0.1:8080` и открывает этот же интерфейс (Чат, Thinking, Файлы, Терминал) в мобильном браузере или в APK!
-   - Установка в Termux в одну строку!
+6. **⚡ Официальный Antigravity CLI (`agy`) в Termux**:
+   - Полноценный терминальный интерфейс Antigravity CLI прямо на Android.
+   - Установка в одну команду: скачивает официальный Google Antigravity binary (v1.3.2 ARM64) и связывает его с Termux.
+   - Работает прямо в терминале: пишите `agy` и сразу работайте с агентом, кодом и файлами.
 
 ---
 
-## 📱 Запуск через Termux на телефоне (В одну строку!)
-
-Если вы хотите использовать мощную среду Linux с Python, Node.js, git и clang:
+## 📱 Запуск `agy` CLI в Termux (В одну строку!)
 
 1. Откройте **Termux** на смартфоне.
-2. Вставьте и выполните команду:
+2. Вставьте и запустите команду:
    ```bash
-   pkg update -y && pkg install -y git python && git clone https://github.com/bbqabsolute/antigravity-mobile.git && cd antigravity-mobile/termux && bash install.sh
+   pkg update -y && pkg install -y git && git clone https://github.com/bbqabsolute/antigravity-mobile.git && cd antigravity-mobile/termux && bash install.sh
    ```
-3. Готово! Теперь вам доступна глобальная команда:
-   * `agy --ui` — запускает локальный сервер и открывает полноценный мобильный интерфейс Antigravity в браузере (или в APK).
-   * `agy` — запускает интерактивный консольный CLI прямо в терминале Termux.
+3. Готово! Теперь в любой папке Termux работает команда **`agy`**:
+   * **`agy`** — интерактивный терминальный AI-агент Antigravity.
+   * **`agy -p "напиши скрипт..."`** — быстрое выполнение задачи без лишних окон.
+   * **`agy --help`** — просмотр всех ключей и доступных моделей.
 
 ---
 

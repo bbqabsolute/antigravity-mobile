@@ -1,3 +1,7 @@
 #!/data/data/com.termux/files/usr/bin/bash
-DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-python "$DIR/agy.py" --ui "$@"
+if command -v agy >/dev/null 2>&1; then
+    exec agy "$@"
+else
+    DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+    exec python "$DIR/agy.py" "$@"
+fi

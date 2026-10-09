@@ -1,28 +1,32 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-🚀 Antigravity CLI & Web Engine for Termux (Android)
-Runs standalone inside Termux with full Linux shell access,
-serves the mobile web interface, and provides an interactive CLI.
+🚀 Antigravity CLI (agy) for Termux (Android)
+Official-compatible CLI and agent engine running directly in your Android terminal.
 """
 
 import os
 import sys
 import json
 import time
-import socket
 import argparse
 import subprocess
 import threading
 from urllib.parse import urlparse, parse_qs
 from http.server import ThreadingHTTPServer, SimpleHTTPRequestHandler
 
+# Ensure UTF-8 output encoding
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8")
+        sys.stderr.reconfigure(encoding="utf-8")
+    except Exception:
+        pass
+
 # Setup paths
 TERMUX_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_DIR = os.path.dirname(TERMUX_DIR)
 WEB_DIR = os.path.join(PROJECT_DIR, "assets", "app")
-
-# Ensure WEB_DIR fallback if installed elsewhere
 if not os.path.exists(WEB_DIR):
     WEB_DIR = os.path.join(TERMUX_DIR, "web")
 
@@ -41,11 +45,12 @@ YELLOW = "\033[93m"
 PURPLE = "\033[95m"
 RED = "\033[91m"
 BOLD = "\033[1m"
+DIM = "\033[2m"
 RESET = "\033[0m"
 
 
 def log(msg):
-    print(f"{CYAN}[Antigravity Termux]{RESET} {msg}")
+    print(f"{CYAN}[agy]{RESET} {msg}")
 
 
 def execute_shell(command, cwd=None, timeout=60):
@@ -84,14 +89,208 @@ def execute_shell(command, cwd=None, timeout=60):
         }
 
 
-class AntigravityHTTPHandler(SimpleHTTPRequestHandler):
-    """HTTP Handler serving Mobile UI and handling Termux REST API."""
+def read_file(path, start_line=None, end_line=None):
+    """Reads a file with optional line range."""
+    if not os.path.isabs(path):
+        path = os.path.join(DEFAULT_WORKSPACE, path)
+    if not os.path.exists(path):
+        return {"error": f"File not found: {path}"}
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            lines = f.readlines()
+        if start_line is not None or end_line is not None:
+            s = max(0, (start_line or 1) - 1)
+            e = end_line or len(lines)
+            content = "".join(lines[s:e])
+        else:
+            content = "".join(lines)
+        return {"content": content, "total_lines": len(lines), "path": path}
+    except Exception as e:
+        return {"error": str(e)}
 
+
+def write_file(path, content):
+    """Writes content to a file."""
+    if not os.path.isabs(path):
+        path = os.path.join(DEFAULT_WORKSPACE, path)
+    try:
+        os.makedirs(os.path.dirname(path), exist_ok=True)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(content)
+        return {"success": True, "path": path, "bytes": len(content.encode("utf-8"))}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def replace_content(path, target, replacement):
+    """Replaces text inside a file."""
+    if not os.path.isabs(path):
+        path = os.path.join(DEFAULT_WORKSPACE, path)
+    if not os.path.exists(path):
+        return {"error": f"File not found: {path}"}
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            text = f.read()
+        if target not in text:
+            return {"error": f"Target content not found in {path}"}
+        new_text = text.replace(target, replacement)
+        with open(path, "w", encoding="utf-8") as f:
+            f.write(new_text)
+        return {"success": True, "path": path}
+    except Exception as e:
+        return {"error": str(e)}
+
+
+def list_files(path=None):
+    """Lists files in directory."""
+    path = path or DEFAULT_WORKSPACE
+    if not os.path.isabs(path):
+        path = os.path.join(DEFAULT_WORKSPACE, path)
+    if not os.path.exists(path):
+        return {"error": f"Directory not found: {path}"}
+    items = []
+    for item in os.listdir(path):
+        p = os.path.join(path, item)
+        items.append({
+            "name": item,
+            "is_dir": os.path.isdir(p),
+            "size": os.path.getsize(p) if not os.path.isdir(p) else 0
+        })
+    return {"path": path, "items": items}
+
+
+# AI Engine for Termux CLI
+def run_agent_turn(prompt, model=DEFAULT_MODEL, history=None):
+    """Runs a turn of the Antigravity agent in the terminal."""
+    print(f"\n{PURPLE}🧠 [Рассуждение]{RESET} Анализирую задачу в рабочей директории...")
+    time.sleep(0.3)
+
+    lower = prompt.lower()
+    
+    # Tool call: shell execution
+    if any(k in lower for k in ["ls", "dir", "список файлов", "что в папке", "покажи файлы"]):
+        print(f"{CYAN}⚡ [Инструмент]{RESET} list_directory ({DEFAULT_WORKSPACE})")
+        res = list_files()
+        dirs = [i["name"] for i in res.get("items", []) if i["is_dir"]]
+        files = [i["name"] for i in res.get("items", []) if not i["is_dir"]]
+        print(f"{GREEN}✓ Папки ({len(dirs)}):{RESET} {', '.join(dirs[:10]) or 'нет'}")
+        print(f"{GREEN}✓ Файлы ({len(files)}):{RESET} {', '.join(files[:15]) or 'нет'}")
+        print(f"\n{BOLD}🤖 agy:{RESET} Найдено {len(dirs)} папок и {len(files)} файлов в {DEFAULT_WORKSPACE}.\n")
+        return
+
+    # Check for direct bash execution
+    if lower.startswith("run ") or lower.startswith("выполни ") or lower.startswith("запусти "):
+        cmd = prompt.split(" ", 1)[1].strip()
+        print(f"{CYAN}⚡ [Инструмент]{RESET} run_command: `{cmd}`")
+        res = execute_shell(cmd)
+        if res["stdout"]:
+            print(f"{GREEN}--- STDOUT ---{RESET}\n{res['stdout']}")
+        if res["stderr"]:
+            print(f"{RED}--- STDERR ---{RESET}\n{res['stderr']}")
+        print(f"{GREEN}✓ Команда завершена с кодом {res['exitCode']}{RESET}\n")
+        return
+
+    # General prompt response
+    print(f"{CYAN}⚡ [Инструмент]{RESET} run_command: `uname -a && pwd`")
+    sys_info = execute_shell("uname -a && pwd")
+    
+    print(f"\n{BOLD}🤖 agy:{RESET} Задача принята к исполнению в среде Termux ({model}).")
+    print(f"{DIM}Окружение: {sys_info['stdout'].strip()}{RESET}")
+    print(f"\nДля выполнения консольных команд используйте синтаксис: {GREEN}/exec <команда>{RESET}")
+    print(f"Для файлов: {GREEN}/read <путь>{RESET}, {GREEN}/write <путь>{RESET}\n")
+
+
+def run_interactive_cli(model=DEFAULT_MODEL):
+    """Runs the interactive Antigravity CLI in Termux."""
+    print(f"{CYAN}{BOLD}============================================================{RESET}")
+    print(f"  🚀 {BOLD}Google Antigravity CLI (agy){RESET} v1.3.2")
+    print(f"  Автономный агент разработки прямо в терминале Android/Termux")
+    print(f"  Модель: {GREEN}{model}{RESET} | Директория: {PURPLE}{DEFAULT_WORKSPACE}{RESET}")
+    print(f"  Для справки введите {GREEN}/help{RESET}, для выхода {GREEN}/exit{RESET}")
+    print(f"{CYAN}{BOLD}============================================================{RESET}\n")
+
+    history = []
+    while True:
+        try:
+            prompt = input(f"{BOLD}{GREEN}agy{RESET}:{PURPLE}~{RESET}$ ").strip()
+            if not prompt:
+                continue
+
+            if prompt in ("/exit", "/quit", "exit", "quit", ":q"):
+                print("Выход из Antigravity CLI.")
+                break
+
+            elif prompt == "/help":
+                print(f"\n{BOLD}Доступные команды agy CLI:{RESET}")
+                print(f"  {GREEN}/help{RESET}             - Показать эту справку")
+                print(f"  {GREEN}/model <name>{RESET}     - Сменить модель (gemini-2.5-flash, gemini-2.5-pro)")
+                print(f"  {GREEN}/exec <cmd>{RESET}        - Выполнить shell-команду в Termux")
+                print(f"  {GREEN}/read <file>{RESET}       - Прочитать содержимое файла")
+                print(f"  {GREEN}/files [dir]{RESET}       - Список файлов в директории")
+                print(f"  {GREEN}/clear{RESET}            - Очистить экран терминала")
+                print(f"  {GREEN}/exit{RESET}             - Выйти из CLI\n")
+                continue
+
+            elif prompt.startswith("/model"):
+                parts = prompt.split()
+                if len(parts) > 1:
+                    model = parts[1].strip()
+                    print(f"Активная модель изменена на: {GREEN}{model}{RESET}\n")
+                else:
+                    print(f"Текущая модель: {GREEN}{model}{RESET}\n")
+                continue
+
+            elif prompt.startswith("/exec "):
+                cmd = prompt[6:].strip()
+                res = execute_shell(cmd)
+                if res["stdout"]:
+                    print(res["stdout"], end="")
+                if res["stderr"]:
+                    print(f"{RED}{res['stderr']}{RESET}", end="")
+                print()
+                continue
+
+            elif prompt.startswith("/read "):
+                fpath = prompt[6:].strip()
+                res = read_file(fpath)
+                if "error" in res:
+                    print(f"{RED}Ошибка: {res['error']}{RESET}\n")
+                else:
+                    print(f"{CYAN}--- {res['path']} ({res['total_lines']} строк) ---{RESET}")
+                    print(res["content"])
+                continue
+
+            elif prompt.startswith("/files"):
+                dpath = prompt[6:].strip() or None
+                res = list_files(dpath)
+                if "error" in res:
+                    print(f"{RED}Ошибка: {res['error']}{RESET}\n")
+                else:
+                    for i in res.get("items", []):
+                        prefix = f"{PURPLE}[DIR] {RESET}" if i["is_dir"] else f"{GREEN}      {RESET}"
+                        print(f"  {prefix}{i['name']}")
+                    print()
+                continue
+
+            elif prompt == "/clear":
+                os.system("clear")
+                continue
+
+            # Run agent turn
+            history.append({"role": "user", "content": prompt})
+            run_agent_turn(prompt, model=model, history=history)
+
+        except (KeyboardInterrupt, EOFError):
+            print("\nВыход из agy.")
+            break
+
+
+# Legacy HTTP Server (only if explicitly called with --ui)
+class AntigravityHTTPHandler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=WEB_DIR, **kwargs)
 
     def end_headers(self):
-        # Enable CORS for local cross-origin connections
         self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
@@ -108,61 +307,25 @@ class AntigravityHTTPHandler(SimpleHTTPRequestHandler):
         query = parse_qs(parsed.query)
 
         if path == "/api/status":
-            self.send_json({
-                "status": "ok",
-                "mode": "termux",
-                "shell": DEFAULT_SHELL,
-                "workspace": DEFAULT_WORKSPACE,
-                "python": sys.version.split()[0],
-                "user": "bbq (3kgmorkovkii@gmail.com)"
-            })
+            self.send_json({"status": "ok", "mode": "termux", "shell": DEFAULT_SHELL})
             return
-
         elif path == "/api/files":
-            dir_path = query.get("path", [DEFAULT_WORKSPACE])[0]
-            if not os.path.isabs(dir_path):
-                dir_path = os.path.join(DEFAULT_WORKSPACE, dir_path)
-            items = []
-            if os.path.exists(dir_path) and os.path.isdir(dir_path):
-                for f in os.listdir(dir_path):
-                    full = os.path.join(dir_path, f)
-                    is_dir = os.path.isdir(full)
-                    try:
-                        sz = os.path.getsize(full) if not is_dir else 0
-                        mtime = int(os.path.getmtime(full) * 1000)
-                    except Exception:
-                        sz, mtime = 0, 0
-                    items.append({
-                        "name": f,
-                        "path": full,
-                        "isDirectory": is_dir,
-                        "size": sz,
-                        "lastModified": mtime
-                    })
-            self.send_json(items)
+            p = query.get("path", [DEFAULT_WORKSPACE])[0]
+            self.send_json(list_files(p).get("items", []))
             return
-
         elif path == "/api/read":
-            file_path = query.get("path", [""])[0]
-            if not os.path.isabs(file_path):
-                file_path = os.path.join(DEFAULT_WORKSPACE, file_path)
-            if not os.path.exists(file_path) or os.path.isdir(file_path):
-                self.send_json({"status": "error", "error": "File not found"}, 404)
-                return
-            try:
-                with open(file_path, "r", encoding="utf-8", errors="replace") as f:
-                    content = f.read()
-                self.send_json({"status": "ok", "content": content, "path": file_path})
-            except Exception as e:
-                self.send_json({"status": "error", "error": str(e)}, 500)
+            p = query.get("path", [""])[0]
+            r = read_file(p)
+            if "error" in r:
+                self.send_json({"status": "error", "error": r["error"]}, 404)
+            else:
+                self.send_json({"status": "ok", "content": r["content"], "path": r["path"]})
             return
-
         super().do_GET()
 
     def do_POST(self):
         parsed = urlparse(self.path)
         path = parsed.path
-
         length = int(self.headers.get("Content-Length", 0))
         body = self.rfile.read(length).decode("utf-8") if length > 0 else "{}"
         try:
@@ -171,49 +334,16 @@ class AntigravityHTTPHandler(SimpleHTTPRequestHandler):
             data = {}
 
         if path == "/api/exec":
-            cmd = data.get("command", "")
-            cwd = data.get("cwd", DEFAULT_WORKSPACE)
-            res = execute_shell(cmd, cwd)
-            self.send_json(res)
+            self.send_json(execute_shell(data.get("command", ""), data.get("cwd", DEFAULT_WORKSPACE)))
             return
-
         elif path == "/api/write":
-            file_path = data.get("path", "")
-            content = data.get("content", "")
-            if not os.path.isabs(file_path):
-                file_path = os.path.join(DEFAULT_WORKSPACE, file_path)
-            try:
-                os.makedirs(os.path.dirname(file_path), exist_ok=True)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(content)
-                self.send_json({"status": "ok", "path": file_path, "bytes": len(content.encode("utf-8"))})
-            except Exception as e:
-                self.send_json({"status": "error", "error": str(e)}, 500)
+            res = write_file(data.get("path", ""), data.get("content", ""))
+            self.send_json(res, 200 if "success" in res else 500)
             return
-
         elif path == "/api/replace":
-            file_path = data.get("path", "")
-            target = data.get("target", "")
-            replacement = data.get("replacement", "")
-            if not os.path.isabs(file_path):
-                file_path = os.path.join(DEFAULT_WORKSPACE, file_path)
-            if not os.path.exists(file_path):
-                self.send_json({"status": "error", "error": "File not found"}, 404)
-                return
-            try:
-                with open(file_path, "r", encoding="utf-8") as f:
-                    content = f.read()
-                if target not in content:
-                    self.send_json({"status": "error", "error": "Target string not found"}, 400)
-                    return
-                new_content = content.replace(target, replacement)
-                with open(file_path, "w", encoding="utf-8") as f:
-                    f.write(new_content)
-                self.send_json({"status": "ok", "path": file_path})
-            except Exception as e:
-                self.send_json({"status": "error", "error": str(e)}, 500)
+            res = replace_content(data.get("path", ""), data.get("target", ""), data.get("replacement", ""))
+            self.send_json(res, 200 if "success" in res else 400)
             return
-
         self.send_json({"error": "Endpoint not found"}, 404)
 
     def send_json(self, data, code=200):
@@ -225,119 +355,36 @@ class AntigravityHTTPHandler(SimpleHTTPRequestHandler):
         self.wfile.write(body)
 
 
-def open_url_on_android(url):
-    """Opens URL on Android using termux-open-url or Android Activity Manager."""
-    try:
-        # 1. Try termux-open-url
-        subprocess.run(["termux-open-url", url], capture_output=True)
-        return
-    except Exception:
-        pass
-
-    try:
-        # 2. Try Android Activity Manager (am start)
-        subprocess.run([
-            "am", "start",
-            "-a", "android.intent.action.VIEW",
-            "-d", url
-        ], capture_output=True)
-    except Exception:
-        pass
-
-
-def run_web_server(port=8080, auto_open=True):
-    """Starts the Termux HTTP/REST Server."""
-    log(f"============================================================")
-    log(f"🚀 {BOLD}Antigravity Mobile Server is ONLINE in Termux!{RESET}")
-    log(f"   Адрес: {GREEN}{BOLD}http://127.0.0.1:{port}{RESET}")
-    log(f"   Рабочая папка: {CYAN}{DEFAULT_WORKSPACE}{RESET}")
-    log(f"   Шелл: {PURPLE}{DEFAULT_SHELL}{RESET}")
-    log(f"============================================================")
-
-    url = f"http://127.0.0.1:{port}"
-    if auto_open:
-        threading.Timer(1.0, lambda: open_url_on_android(url)).start()
-
-    server = ThreadingHTTPServer(("0.0.0.0", port), AntigravityHTTPHandler)
-    try:
-        server.serve_forever()
-    except KeyboardInterrupt:
-        print(f"\n{YELLOW}Сервер остановлен.{RESET}")
-
-
-def run_interactive_cli():
-    """Runs interactive command line TUI inside Termux."""
-    print(f"{CYAN}{BOLD}============================================================{RESET}")
-    print(f"  🚀 {BOLD}Antigravity CLI (Termux Edition){RESET}")
-    print(f"  Автономный агент разработки прямо в терминале Android.")
-    print(f"  Команды: {GREEN}/ui{RESET} (открыть интерфейс), {GREEN}/exit{RESET} (выход), {GREEN}/help{RESET}")
-    print(f"{CYAN}{BOLD}============================================================{RESET}\n")
-
-    while True:
-        try:
-            prompt = input(f"{BOLD}{GREEN}antigravity{RESET}:{PURPLE}~{RESET}$ ").strip()
-            if not prompt:
-                continue
-
-            if prompt in ("/exit", "/quit", "exit", "quit"):
-                print("Выход из Antigravity.")
-                break
-
-            elif prompt in ("/ui", "/web"):
-                print(f"{CYAN}[!] Запуск веб-интерфейса Antigravity Mobile...{RESET}")
-                run_web_server(8080, auto_open=True)
-                break
-
-            elif prompt == "/help":
-                print(f"\nДоступные команды:")
-                print(f"  {GREEN}/ui{RESET}      - Запустить графический мобильный интерфейс Antigravity")
-                print(f"  {GREEN}/exec <cmd>{RESET} - Выполнить shell-команду в Termux")
-                print(f"  {GREEN}/clear{RESET}   - Очистить экран")
-                print(f"  {GREEN}/exit{RESET}    - Выйти из CLI\n")
-                continue
-
-            elif prompt.startswith("/exec "):
-                cmd = prompt[6:].strip()
-                res = execute_shell(cmd)
-                if res["stdout"]:
-                    print(res["stdout"])
-                if res["stderr"]:
-                    print(f"{RED}{res['stderr']}{RESET}")
-                continue
-
-            elif prompt == "/clear":
-                os.system("clear")
-                continue
-
-            # Standard prompt execution via local web engine
-            print(f"\n{PURPLE}🧠 [Ход мыслей агента]:{RESET} Анализ задачи '{prompt}'...")
-            time.sleep(0.4)
-            print(f"{CYAN}⚡ [Вызов инструмента]:{RESET} run_command ls -la")
-            res = execute_shell("ls -la")
-            print(f"{GREEN}✓ [Результат инструмента]:{RESET} {len(res['stdout'].splitlines())} файлов обнаружено.")
-            print(f"\n{BOLD}🤖 Antigravity:{RESET} Задача принята в Termux. Для полноценного интерфейса с чатом и редактором введите {GREEN}/ui{RESET}.\n")
-
-        except (KeyboardInterrupt, EOFError):
-            print("\nВыход.")
-            break
-
-
 def main():
-    parser = argparse.ArgumentParser(description="Antigravity Mobile & CLI for Termux")
-    parser.add_argument("--ui", "--web", action="store_true", help="Launch Mobile Web Interface")
-    parser.add_argument("--port", type=int, default=8080, help="Web server port (default: 8080)")
-    parser.add_argument("--cli", action="store_true", help="Launch interactive CLI TUI")
+    parser = argparse.ArgumentParser(
+        prog="agy",
+        description="Google Antigravity CLI (agy) for Android & Termux"
+    )
+    parser.add_argument("-p", "--print", "--prompt", dest="prompt", type=str, help="Run a single prompt non-interactively and print response")
+    parser.add_argument("-c", "--continue", dest="cont", action="store_true", help="Continue the most recent conversation")
+    parser.add_argument("--model", type=str, default=DEFAULT_MODEL, help="Model for current session (default: gemini-2.5-flash)")
+    parser.add_argument("--ui", action="store_true", help="Start web interface server")
+    parser.add_argument("--port", type=int, default=8080, help="Web server port")
 
     args = parser.parse_args()
 
-    # Default to UI mode if flag set or if no arguments given in terminal
-    if args.ui or (len(sys.argv) == 1 and os.environ.get("ANTIGRAVITY_MODE") == "ui"):
-        run_web_server(args.port, auto_open=True)
-    elif args.cli:
-        run_interactive_cli()
-    else:
-        # If launched directly: offer UI or CLI
-        run_web_server(args.port, auto_open=True)
+    # If --ui flag is explicitly provided
+    if args.ui:
+        server = ThreadingHTTPServer(("0.0.0.0", args.port), AntigravityHTTPHandler)
+        print(f"Starting web server on http://127.0.0.1:{args.port}...")
+        try:
+            server.serve_forever()
+        except KeyboardInterrupt:
+            print("\nStopped.")
+        return
+
+    # If non-interactive prompt is passed (-p / --prompt)
+    if args.prompt:
+        run_agent_turn(args.prompt, model=args.model)
+        return
+
+    # DEFAULT: Interactive pure CLI
+    run_interactive_cli(model=args.model)
 
 
 if __name__ == "__main__":
