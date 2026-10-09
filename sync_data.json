@@ -1,4 +1,13 @@
 {
   "_init": true,
-  "codes": {}
+  "codes": {
+    "839215": {
+      "code": "839215",
+      "telegram_id": "8273442820",
+      "quick_model": "gemini-3.5-flash",
+      "reasoning": true,
+      "chats": {},
+      "updated_at": 1791551570
+    }
+  }
 }
