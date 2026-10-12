@@ -4,12 +4,22 @@
     "599836": {
       "code": "599836",
       "formatted_code": "599-836",
-      "telegram_id": "8273442820",
+      "telegram_id": 8273442820,
       "first_name": "Максим",
       "username": "Ldoqq",
       "quick_model": "video-ai",
       "reasoning": true,
       "chats": {
+        "0": {
+          "id": "5f2f6f24",
+          "title": "Привет сделай программу н...",
+          "model": "auto"
+        },
+        "1": {
+          "id": "ec981db3",
+          "title": "Новый чат",
+          "model": "gemini-3.5-flash"
+        },
         "5f2f6f24": {
           "id": "5f2f6f24",
           "title": "Привет сделай программу н...",
@@ -80,10 +90,16 @@
             }
           ],
           "updated_at": 1791766116
+        },
+        "chat_mv4srm2c": {
+          "id": "chat_mv4srm2c",
+          "model": "video-ai",
+          "title": "Новый диалог",
+          "messages": []
         }
       },
-      "updated_at": 1791766117,
-      "source": "telegram_bot"
+      "updated_at": 1791782044,
+      "source": "webapp"
     }
   }
 }
