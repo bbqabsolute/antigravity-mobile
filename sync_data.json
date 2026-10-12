@@ -1,4 +1,8 @@
 {
   "_init": true,
-  "codes": {}
+  "codes": {
+    "test": {
+      "hello": "world"
+    }
+  }
 }
